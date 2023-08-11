@@ -11,6 +11,8 @@
 #define MAX_NO_TRANSMISSION_TIMES 10
 #define BUF_LEN 5
 #define MAX_PEER 5
+#define IP_ADDR "10.0.4.9"
+#define PORT 8267
 
 struct peerData{
     struct sockaddr_in source_addr;
@@ -48,7 +50,7 @@ void *sendWorker(void *args){
                 for(int m=0; m<i->end; m++){
                     //找到相同tag的peer
                     if(i->peer[n].tag==i->peer[m].tag){
-                        sendto(i->udp, i->peer[n].tx_buf, BUF_LEN,  0, (struct sockaddr*)&(i->peer[m].source_addr), i->peer[m].source_addr_len);
+                        sendto(i->udp, &(i->peer[n].tx_buf), BUF_LEN,  0, (struct sockaddr*)&(i->peer[m].source_addr), i->peer[m].source_addr_len);
                     }
                 }
             }
@@ -67,7 +69,7 @@ void *recvWorker(void *args){
     int counter = 0;
     int err;
     while(1){
-        err = recvfrom(i->udp, rx_buf, BUF_LEN, 0, (struct sockaddr *)&(source_addr), &(source_addr_len));
+        err = recvfrom(i->udp, &rx_buf, BUF_LEN, 0, (struct sockaddr *)&(source_addr), &(source_addr_len));
         if(err>0){
             //等待主线程取走上一次的数据
             while(i->isCached){
@@ -91,9 +93,9 @@ int main(){
 
     timeOut.tv_sec = 1;
     timeOut.tv_usec = 0;
-    sock_addr.sin_addr.s_addr = inet_addr("10.0.4.9");
+    sock_addr.sin_addr.s_addr = inet_addr(IP_ADDR);
     sock_addr.sin_family = AF_INET;
-    sock_addr.sin_port = htons(8267);
+    sock_addr.sin_port = htons(PORT);
 
     
     if (setsockopt(udp, SOL_SOCKET, SO_RCVTIMEO, &timeOut, sizeof(timeOut)) < 0){
@@ -142,7 +144,7 @@ int main(){
         if(!isRegistered){
             //初次连接，判断握手，分配peer
             if(info.end<MAX_PEER){
-                buf = &(info.rx_buf);
+                buf = (char*)&(info.rx_buf);
 
                 //请求连接信号是前3个字节为0xff，第四个字节作为tag
                 if(buf[0]==255&&buf[1]==255&&buf[2]==255){
